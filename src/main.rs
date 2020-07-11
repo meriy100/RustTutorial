@@ -78,8 +78,20 @@ fn parse(v2: &mut Vec<CommandType>) -> Option<Node> {
         None => None
     }
 }
-
-
+fn safe_increment(x: u8) -> u8 {
+    return if x == u8::MAX {
+        u8::MIN
+    } else {
+        x + 1
+    };
+}
+fn safe_decrement(x: u8) -> u8 {
+    return if x == 0 {
+        u8::MAX
+    } else {
+        x - 1
+    };
+}
 fn execute(interpreter: Interpreter) -> Option<Interpreter> {
     let mut memory = interpreter.memory;
     let pointer = interpreter.pointer;
@@ -87,11 +99,7 @@ fn execute(interpreter: Interpreter) -> Option<Interpreter> {
      interpreter.current_node.and_then(|current_node|
          match (*current_node).command_type {
              CommandType::Inc => {
-                 memory[pointer] = if memory[pointer] == 255 {
-                     0 as u8
-                 } else {
-                     memory[pointer] + 1
-                 };
+                 memory[pointer] = safe_increment(memory[pointer]);
                  Some(Interpreter {
                      memory,
                      pointer,
@@ -100,11 +108,7 @@ fn execute(interpreter: Interpreter) -> Option<Interpreter> {
                  })
              },
              CommandType::Dec => {
-                 memory[pointer] = if memory[pointer] == 0 {
-                     255 as u8
-                 } else {
-                     memory[pointer] - 1
-                 };
+                 memory[pointer] = safe_decrement(memory[pointer]);
                  Some(Interpreter {
                      memory,
                      pointer,
