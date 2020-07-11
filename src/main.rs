@@ -1,12 +1,12 @@
 use std::fs::File;
 use std::io::{self, Read};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum CommandType {
     Inc, Dec, PInc, PDec, Get, Set, While, End
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 struct Node {
     command_type: CommandType,
     left: Option<Box<Node>>,
@@ -17,7 +17,8 @@ struct Node {
 struct Interpreter {
     memory: Vec<u8>,
     pointer: usize,
-    current_node: Option<Box<Node>>
+    current_node: Option<Box<Node>>,
+    while_stack: Vec<Box<Node>>
 }
 fn char_to_command_type(c: char) -> Option<CommandType> {
     return match c {
@@ -82,6 +83,7 @@ fn parse(v2: &mut Vec<CommandType>) -> Option<Node> {
 fn execute(interpreter: Interpreter) -> Option<Interpreter> {
     let mut memory = interpreter.memory;
     let pointer = interpreter.pointer;
+    let mut while_stack = interpreter.while_stack;
      interpreter.current_node.and_then(|current_node|
          match (*current_node).command_type {
              CommandType::Inc => {
@@ -89,7 +91,8 @@ fn execute(interpreter: Interpreter) -> Option<Interpreter> {
                  Some(Interpreter {
                      memory,
                      pointer,
-                     current_node: (*current_node).left
+                     current_node: (*current_node).left,
+                     while_stack
                  })
              },
              CommandType::Dec => {
@@ -97,21 +100,24 @@ fn execute(interpreter: Interpreter) -> Option<Interpreter> {
                  Some(Interpreter {
                      memory,
                      pointer,
-                     current_node: (*current_node).left
+                     current_node: (*current_node).left,
+                     while_stack
                  })
              },
              CommandType::PInc => {
                  Some(Interpreter {
                      memory,
                      pointer: pointer + 1,
-                     current_node: (*current_node).left
+                     current_node: (*current_node).left,
+                     while_stack
                  })
              },
              CommandType::PDec => {
                  Some(Interpreter {
                      memory,
                      pointer: pointer - 1,
-                     current_node: (*current_node).left
+                     current_node: (*current_node).left,
+                     while_stack
                  })
              },
              CommandType::While => {
@@ -119,16 +125,30 @@ fn execute(interpreter: Interpreter) -> Option<Interpreter> {
                      Some(Interpreter {
                          memory,
                          pointer,
-                         current_node: (*current_node).right
+                         current_node: (*current_node).right,
+                         while_stack
                      })
                  } else {
+                     while_stack.push(current_node.clone());
                      Some(Interpreter {
                          memory,
                          pointer,
-                         current_node: (*current_node).left
+                         current_node: (*current_node).left,
+                         while_stack
                      })
                  }
              },
+             CommandType::End => {
+                 while_stack.pop().and_then(|while_node|
+                     Some(Interpreter {
+                         memory,
+                         pointer,
+                         current_node: Some(while_node),
+                         while_stack
+                     })
+                 )
+
+             }
             _ => None
          }
      )
@@ -145,7 +165,8 @@ fn main() -> io::Result<()> {
         Some(Interpreter {
             memory: vec![0; 100],
             pointer: 0,
-            current_node: Some(Box::new(ast))
+            current_node: Some(Box::new(ast)),
+            while_stack: vec![],
         })
     );
     while optionInterpreter.is_some() {
