@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 
 #[derive(Debug, Clone, PartialEq)]
 enum CommandType {
@@ -87,7 +87,11 @@ fn execute(interpreter: Interpreter) -> Option<Interpreter> {
      interpreter.current_node.and_then(|current_node|
          match (*current_node).command_type {
              CommandType::Inc => {
-                 memory[pointer] += 1;
+                 memory[pointer] = if memory[pointer] == 255 {
+                     0 as u8
+                 } else {
+                     memory[pointer] + 1
+                 };
                  Some(Interpreter {
                      memory,
                      pointer,
@@ -96,7 +100,11 @@ fn execute(interpreter: Interpreter) -> Option<Interpreter> {
                  })
              },
              CommandType::Dec => {
-                 memory[pointer] -= 1;
+                 memory[pointer] = if memory[pointer] == 0 {
+                     255 as u8
+                 } else {
+                     memory[pointer] - 1
+                 };
                  Some(Interpreter {
                      memory,
                      pointer,
@@ -147,9 +155,35 @@ fn execute(interpreter: Interpreter) -> Option<Interpreter> {
                          while_stack
                      })
                  )
-
              }
-            _ => None
+             CommandType::Get => {
+                 std::io::stdin()
+                     .bytes()
+                     .next()
+                     .and_then(|result| result.ok())
+                     .map(|byte| byte as u8)
+                     .and_then(|u|  {
+                         memory[pointer] = u;
+                         Some(Interpreter {
+                             memory,
+                             pointer,
+                             current_node: (*current_node).left,
+                             while_stack
+                         })
+
+                 })
+             }
+             CommandType::Set => {
+                 io::stdout().write(&[memory[pointer]]);
+                 // println!("{:?}", memory[pointer]);
+                 Some(Interpreter {
+                     memory,
+                     pointer,
+                     current_node: (*current_node).left,
+                     while_stack
+                 })
+             }
+             _ => None
          }
      )
 }
@@ -161,7 +195,7 @@ fn main() -> io::Result<()> {
     file.read_to_string(&mut contents)?;
     let mut v2: Vec<CommandType> = contents.chars().filter_map(char_to_command_type).collect::<Vec<CommandType>>();
     v2.reverse();
-    let mut optionInterpreter: Option<Interpreter> = parse(&mut v2).and_then(|ast|
+    let mut option_interpreter: Option<Interpreter> = parse(&mut v2).and_then(|ast|
         Some(Interpreter {
             memory: vec![0; 100],
             pointer: 0,
@@ -169,9 +203,11 @@ fn main() -> io::Result<()> {
             while_stack: vec![],
         })
     );
-    while optionInterpreter.is_some() {
-        optionInterpreter = optionInterpreter.and_then(execute);
-        println!("{:?}", optionInterpreter);
+    // println!("{:?}", io::stdin().bytes());
+
+    while option_interpreter.is_some() {
+        option_interpreter = option_interpreter.and_then(execute);
+        // println!("{:?}", option_interpreter);
     }
     Ok(())
 }
