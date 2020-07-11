@@ -78,81 +78,57 @@ fn parse(v2: &mut Vec<CommandType>) -> Option<Node> {
     }
 }
 
-// fn execute(interpreter: &mut Interpreter) -> io::Result<()> {
-//     match node.command_type {
-//         CommandType::Inc => {
-//             interpreter.memory[interpreter.pointer] += 1;
-//             match node.left {
-//                 Some(left) => {
-//                     execute(interpreter)
-//                 },
-//                 None => Ok(())
-//             }
-//         },
-//         CommandType::Dec => {
-//             interpreter.memory[interpreter.pointer] -= 1;
-//             match node.left {
-//                 Some(left) => {
-//                     execute(interpreter)
-//                 },
-//                 None => Ok(())
-//             }
-//         },
-//         CommandType::PInc => {
-//             interpreter.pointer += 1;
-//             match node.left {
-//                 Some(left) => {
-//                     execute(interpreter)
-//                 },
-//                 None => Ok(())
-//             }
-//         },
-//         CommandType::PDec => {
-//             interpreter.pointer -= 1;
-//             match node.left {
-//                 Some(left) => {
-//                     execute(interpreter)
-//                 },
-//                 None => Ok(())
-//             }
-//         },
-//         CommandType::While => {
-//             if interpreter.memory[interpreter.pointer] == 0 {
-//                 match node.right {
-//                     Some(right) => {
-//                         execute(interpreter)
-//                     },
-//                     None => Ok(())
-//                 }
-//             } else {
-//                 match node.left {
-//                     Some(left) => {
-//                         execute(interpreter)
-//                     },
-//                     None => Ok(())
-//                 }
-//             }
-//         }
-//         _ => {
-//             Ok(())
-//         }
-//     }
-// }
-
 
 fn execute(interpreter: Interpreter) -> Option<Interpreter> {
     let mut memory = interpreter.memory;
     let pointer = interpreter.pointer;
      interpreter.current_node.and_then(|current_node|
          match (*current_node).command_type {
-            CommandType::Inc => {
-                memory[pointer] += 1;
-                Some(Interpreter {
-                    memory,
-                    pointer: 0,
-                    current_node: (*current_node).left
-                })
-            },
+             CommandType::Inc => {
+                 memory[pointer] += 1;
+                 Some(Interpreter {
+                     memory,
+                     pointer,
+                     current_node: (*current_node).left
+                 })
+             },
+             CommandType::Dec => {
+                 memory[pointer] -= 1;
+                 Some(Interpreter {
+                     memory,
+                     pointer,
+                     current_node: (*current_node).left
+                 })
+             },
+             CommandType::PInc => {
+                 Some(Interpreter {
+                     memory,
+                     pointer: pointer + 1,
+                     current_node: (*current_node).left
+                 })
+             },
+             CommandType::PDec => {
+                 Some(Interpreter {
+                     memory,
+                     pointer: pointer - 1,
+                     current_node: (*current_node).left
+                 })
+             },
+             CommandType::While => {
+                 if memory[pointer] == 0 {
+                     Some(Interpreter {
+                         memory,
+                         pointer,
+                         current_node: (*current_node).right
+                     })
+                 } else {
+                     Some(Interpreter {
+                         memory,
+                         pointer,
+                         current_node: (*current_node).left
+                     })
+                 }
+             },
             _ => None
          }
      )
@@ -174,6 +150,7 @@ fn main() -> io::Result<()> {
     );
     while optionInterpreter.is_some() {
         optionInterpreter = optionInterpreter.and_then(execute);
+        println!("{:?}", optionInterpreter);
     }
     Ok(())
 }
